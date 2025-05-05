@@ -1,0 +1,47 @@
+{
+  description = "Pixi env for clay_3dp_print";
+
+  inputs = {
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default-linux";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+  };
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.treefmt-nix.flakeModule
+      ];
+      systems = import inputs.systems;
+      perSystem =
+        {
+          pkgs,
+          ...
+        }:
+        let
+          fhs = pkgs.buildFHSEnv {
+            name = "pixi-env";
+
+            targetPkgs =
+              _: with pkgs; [
+                pixi
+              ];
+
+          };
+        in
+        {
+          devShells.default = fhs.env;
+          treefmt
+          = {
+            projectRootFile = ".jj/";
+            programs = {
+            ruff-check.enable = true;
+            ruff-format.enable = true;
+            nixfmt.enable = true;
+            taplo.enable = true; # toml
+          };
+          };
+        };
+    };
+}

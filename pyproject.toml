@@ -1,0 +1,29 @@
+[project]
+authors = [{name = "Anton Tetov", email = "anton@tetov.se"}]
+dependencies = []
+name = "clay_3dp_print"
+requires-python = ">= 3.11"
+version = "0.1.0"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge", "nodefaults"]
+platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+clay_3dp_print = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+compas_rrc = ">=2.0.0,<3"
+
+[tool.pixi.feature.dev.tasks]
+fmt = "ruff format src"
+
+[tool.pixi.feature.dev.dependencies]
+ruff = "*"
+
+[tool.pixi.environments]
+dev = ["dev"]

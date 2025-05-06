@@ -77,16 +77,14 @@ def main(filepath: os.PathLike):
 
     abb.send(rrc.MoveToFrame(first_frame, speed, rrc.Zone.FINE))
 
-    abb.send(rrc.PrintText(f"0"))
-    for layer in frames:
+    for i, layer in enumerate(frames):
+        abb.send(rrc.PrintText(f"Layer {i}"))
         for i, frame in enumerate(layer):
             abb.send(
                 rrc.MoveToFrame(
                     frame, speed_print, rrc.Zone.FINE, motion_type=rrc.Motion.LINEAR
                 )
             )
-
-            abb.send(rrc.PrintText(f"{i + 1}"))
 
     # Move robot to end position
     abb.send(

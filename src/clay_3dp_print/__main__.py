@@ -1,10 +1,9 @@
 import os
-import pathlib
 import sys
 
 from compas import json_load
 import compas_rrc as rrc
-from compas.geometry import Frame, Point, Vector
+from compas.geometry import Vector
 
 # IP = "192.168.8.30" # cook
 IP = None  # localhost
@@ -70,7 +69,7 @@ def main(filepath: os.PathLike):
     abb.send(rrc.Stop())
 
     # Move robot to start position
-    done = abb.send_and_wait(
+    abb.send_and_wait(
         rrc.MoveToJoints(
             robot_joints_start_position, external_axis_dummy, speed, rrc.Zone.FINE
         )
@@ -87,7 +86,7 @@ def main(filepath: os.PathLike):
                 )
             )
 
-            abb.send(rrc.PrintText(f"{i+1}"))
+            abb.send(rrc.PrintText(f"{i + 1}"))
 
     # Move robot to end position
     abb.send(
@@ -97,10 +96,7 @@ def main(filepath: os.PathLike):
     )
 
     # Print Text
-    done = abb.send_and_wait(rrc.PrintText("Compas_RRC Example finish."))
-
-    # End of Code
-    print("Finished")
+    abb.send_and_wait(rrc.PrintText("Print finished."))
 
     # Close client
     ros.close()

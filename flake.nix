@@ -32,15 +32,13 @@
         in
         {
           devShells.default = fhs.env;
-          treefmt
-          = {
-            projectRootFile = ".jj/";
+          treefmt = {
             programs = {
-            ruff-check.enable = true;
-            ruff-format.enable = true;
-            nixfmt.enable = true;
-            taplo.enable = true; # toml
-          };
+              ruff-check.enable = true;
+              ruff-format.enable = true;
+              nixfmt.enable = true;
+              taplo.enable = true; # toml
+            };
           };
         };
     };

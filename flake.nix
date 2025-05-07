@@ -16,22 +16,17 @@
       systems = import inputs.systems;
       perSystem =
         {
+          config,
           pkgs,
           ...
         }:
-        let
-          fhs = pkgs.buildFHSEnv {
-            name = "pixi-env";
-
-            targetPkgs =
-              _: with pkgs; [
-                pixi
-              ];
-
-          };
-        in
         {
-          devShells.default = fhs.env;
+          devShells.default =
+            (pkgs.buildFHSEnv {
+              name = "pixi-env";
+              targetPkgs = _: with pkgs; [ pixi ] ++ (builtins.attrValues config.treefmt.build.programs);
+            }).env;
+
           treefmt = {
             programs = {
               ruff-check.enable = true;

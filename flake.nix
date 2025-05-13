@@ -18,13 +18,28 @@
         {
           config,
           pkgs,
+          self',
           ...
         }:
         {
           devShells.default =
             (pkgs.buildFHSEnv {
               name = "pixi-env";
-              targetPkgs = _: with pkgs; [ pixi ] ++ (builtins.attrValues config.treefmt.build.programs);
+              targetPkgs =
+                _:
+                with pkgs;
+                [
+                  pixi
+                  (pkgs.writeShellApplication {
+                    name = "compose";
+                    runtimeInputs = [ pkgs.docker-compose ];
+                    text = ''
+                      docker-compose -f "${inputs.self}/extra/compas_rrc_compose/compose.yaml" "$@"
+                    '';
+                  })
+
+                ]
+                ++ (builtins.attrValues config.treefmt.build.programs);
             }).env;
 
           treefmt = {

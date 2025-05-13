@@ -10,6 +10,22 @@ IP = "localhost"
 WOBJ = "wobj_pallet_markers"
 TOOL = "t_erratic_t25"
 
+DRY_RUN = False
+
+
+def set_extruder(client: rrc.AbbClient, state: int):
+    client.send_and_wait(rrc.SetDigital("do_extrudeRelSpd", state))
+
+
+def start_extrude(client: rrc.AbbClient):
+    if not DRY_RUN:
+        set_extruder(client, 1)
+
+
+def stop_extrude(client: rrc.AbbClient):
+    if not DRY_RUN:
+        set_extruder(client, 0)
+
 
 def robot_program(frames):
     # Define robot joints
@@ -25,10 +41,12 @@ def robot_program(frames):
     override = 100  # Unit [%]
     max_tcp = 2500  # Unit [mm/s]
 
-    # safety_z = Vector(0, 0, 10)
-    # for layer in frames:
-    #     for frame in layer:
-    #         frame.point += safety_z
+    z_adjustment_mm = 45
+    for layer in frames:
+        for frame in layer:
+            v = frame.normal.copy()
+            v.scale(z_adjustment_mm)
+            frame.point.translate(v)
 
     first_frame = frames[0].pop(0)
 
@@ -39,10 +57,7 @@ def robot_program(frames):
         abb.send(rrc.SetAcceleration(acc, ramp))
         abb.send(rrc.SetMaxSpeed(override, max_tcp))
 
-        # Reset signals
-        # abb.send(rrc.SetDigital('do_X',0))
-        # abb.send(rrc.SetDigital('do_Y',0))
-        # abb.send(rrc.SetDigital('do_Z',0))
+        stop_extrude(abb)  # reset signal
 
         abb.send(rrc.SetTool(TOOL))
         abb.send(rrc.SetWorkObject(WOBJ))
@@ -64,6 +79,8 @@ def robot_program(frames):
 
         abb.send(rrc.MoveToFrame(first_frame, speed, rrc.Zone.FINE))
 
+        start_extrude(abb)
+
         for i, layer in enumerate(frames):
             abb.send(rrc.PrintText(f"Layer {i}"))
             x, y, z = layer[0].point
@@ -76,6 +93,8 @@ def robot_program(frames):
                         frame, speed_print, rrc.Zone.Z1, motion_type=rrc.Motion.LINEAR
                     )
                 )
+
+        stop_extrude(abb)
 
         # Move robot to end position
         abb.send(

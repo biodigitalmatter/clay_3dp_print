@@ -1,9 +1,12 @@
 import sys
+import typing
 
 from compas import json_load
 import compas.geometry
 from compas_fab.backends import RosClient
+from compas_fab.backends.ros.messages import ROSmsg
 import compas_rrc as rrc
+from clay_3dp_print import PrintLayer
 
 # IP = "192.168.8.30" # cook
 IP = "localhost"
@@ -11,65 +14,107 @@ IP = "localhost"
 WOBJ = "wobj_pallet_markers"
 TOOL = "t_erratic_t25"
 
-DRY_RUN = False
-
 SPEED = 75
 SPEED_PRINT = 50
 
+EXTRUSION_FACTOR_DO = "ao_printPtSpd"
 
-def get_set_extruder(state: int):
-    return rrc.SetDigital("do_extrudeRelSpd", state)
+# negative means move towards the sky
+Z_ADJUSTMENT = -3
 
 
-def get_start_extrude():
-    if not DRY_RUN:
-        return get_set_extruder(1)
+def get_set_extruder(speed_factor: float):
+    return rrc.SetAnalog(EXTRUSION_FACTOR_DO, speed_factor)
+
+
+def get_start_extrude(speed_factor=1):
+    return get_set_extruder(speed_factor)
 
 
 def get_stop_extrude():
-    if not DRY_RUN:
-        return get_set_extruder(0)
+    return get_set_extruder(0)
 
 
-def construct_cmds(frames, travel):
-    last_was_t = True
+def construct_cmds(layers: list[PrintLayer]) -> typing.Generator[ROSmsg]:
+    first_print_frame = layers[0].pop(0)
 
-    cmds = []
-    for i, (lframes, ltravel) in enumerate(zip(frames, travel)):
-        lcmds = []
+    first_print_frame.translate_frame_in_local_Z(Z_ADJUSTMENT)
 
-        lcmds.append(rrc.PrintText(f"Layer {i}"))
+    yield rrc.MoveToFrame(
+        first_print_frame, SPEED, rrc.Zone.FINE, motion_type=rrc.Motion.JOINT
+    )
 
-        x, y, z = lframes[0].point
+    for i, layer in enumerate(layers):
+        yield rrc.PrintText(f"Layer {i}")
+
+        x, y, z = layer[0].point
         first_pt_str = f"{x:.2f},{y:.2f},{z:.2f}"
 
-        lcmds.append(rrc.PrintText(f"First frame: {first_pt_str}"))
+        yield rrc.PrintText(f"First frame: {first_pt_str}")
 
-        for f, t in zip(lframes, ltravel, strict=True):
-            if not DRY_RUN:
-                if not t and last_was_t:
-                    lcmds.append(get_start_extrude())
+        for print_frame in layer:
+            yield get_set_extruder(print_frame.extrusion_factor)
 
-                if t and not last_was_t:
-                    lcmds.append(get_stop_extrude())
+            print_frame.translate_frame_in_local_Z(Z_ADJUSTMENT)
 
-            lcmds.append(
-                rrc.MoveToFrame(
-                    f,
-                    SPEED if t else SPEED_PRINT,
-                    rrc.Zone.Z1,
-                    motion_type=rrc.Motion.LINEAR,
-                )
+            if print_frame.is_travel():
+                # TODO: Add retraction
+                pass
+
+            yield rrc.MoveToFrame(
+                print_frame,
+                SPEED if print_frame.is_travel() else SPEED_PRINT,
+                rrc.Zone.Z1,
+                motion_type=rrc.Motion.LINEAR,
+                feedback_level=rrc.FeedbackLevel.DONE,
             )
-            last_was_t = t
-
-        cmds.append(lcmds)
-    return cmds
 
 
-def robot_program(
-    frames: list[list[compas.geometry.Frame]], travel: list[list[bool]] | None
+def process_with_batches(
+    abb: rrc.AbbClient, cmd_generator: typing.Generator[ROSmsg], batch_size: int = 100
 ):
+    futures = []
+    commands_sent = 0
+
+    # Send the first batch
+    for _ in range(batch_size):
+        try:
+            cmd = next(cmd_generator)
+
+            feedback = abb.send(cmd)
+
+            if feedback:
+                futures.append(feedback)
+
+            commands_sent += 1
+        except StopIteration:
+            break
+
+    while futures:
+        completed = []
+        for f in futures:
+            try:
+                f.result(timeout=3)
+                completed.append(f)
+            except rrc.TimeoutException:
+                continue
+
+        # Remove completed futures
+        for f in completed:
+            futures.remove(f)
+
+        # Add more commands to maintain the buffer
+        for _ in range(len(completed)):
+            try:
+                cmd = next(cmd_generator)
+                futures.append(abb.send(cmd))
+                commands_sent += 1
+            except StopIteration:
+                break
+
+
+def robot_program(layers: list[PrintLayer]):
+    breakpoint()
     # Define robot joints
     robot_joints_start_position = robot_joints_end_position = [100, 20, 25, 5, -40, -10]
 
@@ -81,19 +126,7 @@ def robot_program(
     override = 100  # Unit [%]
     max_tcp = 250  # Unit [mm/s]
 
-    z_adjustment_mm = -3  # negative means raise up printbed
-
-    if z_adjustment_mm != 0:
-        for layer in frames:
-            for frame in layer:
-                v = frame.normal.copy()
-                v.scale(z_adjustment_mm)
-                frame.point.translate(v)
-
-    first_frame = frames[0].pop(0)
-    _ = travel[0].pop(0)
-
-    cmds = construct_cmds(frames, travel)
+    cmd_generator = construct_cmds(layers)
 
     with RosClient(host=IP, port=9090) as ros:
         abb = rrc.AbbClient(ros, "/rob1")
@@ -102,8 +135,7 @@ def robot_program(
         abb.send(rrc.SetAcceleration(acc, ramp))
         abb.send(rrc.SetMaxSpeed(override, max_tcp))
 
-        if not DRY_RUN:
-            abb.send_and_wait(get_stop_extrude())  # reset signal
+        abb.send(get_stop_extrude())  # reset signal
 
         abb.send(rrc.SetTool(TOOL))
         abb.send(rrc.SetWorkObject(WOBJ))
@@ -117,21 +149,13 @@ def robot_program(
         abb.send(rrc.Stop())
 
         # Move robot to start position
-        abb.send_and_wait(
+        abb.send(
             rrc.MoveToJoints(
                 robot_joints_start_position, external_axis_dummy, SPEED, rrc.Zone.FINE
             )
         )
 
-        abb.send(rrc.MoveToFrame(first_frame, SPEED, rrc.Zone.FINE))
-
-        for lcmds in cmds:
-            abb.send_and_wait(lcmds.pop(0))
-            for c in lcmds:
-                abb.send(c)
-
-        if not DRY_RUN:
-            abb.send_and_wait((get_stop_extrude()))
+        process_with_batches(abb, cmd_generator)
 
         # Move robot to end position
         abb.send(
@@ -144,24 +168,31 @@ def robot_program(
         abb.send_and_wait(rrc.PrintText("Print finished."))
 
 
+def load_json_from_arg1():
+    filepath = sys.argv[1]
+    data = json_load(filepath)
+    frames = data["frames"]
+    extrusion_factors = data["travel"]
+
+    # put all in one "layer"
+    if isinstance(frames[0], compas.geometry.Frame):
+        if len(extrusion_factors) == len(frames) - 1:
+            # TODO: Fix me
+            extrusion_factors.append(True)
+
+        frames = [frames]
+        extrusion_factors = [extrusion_factors]
+
+    return [
+        PrintLayer.from_frames_and_factors(f, ef)
+        for f, ef in zip(frames, extrusion_factors, strict=True)
+    ]
+
+
 def main():
     if len(sys.argv) > 1:
-        filepath = sys.argv[1]
-        data = json_load(filepath)
-        frames = data["frames"]
-        travel = data["travel"]
-
-        # put all in one "layer"
-        if isinstance(frames[0], compas.geometry.Frame):
-            frames = [frames]
-            travel = [travel]
-
-        print(len(frames))
-        print(len(travel))
-        print(len(frames[0]))
-        print(len(travel[0]))
-
-        robot_program(frames, travel)
+        print_layers = load_json_from_arg1()
+        robot_program(print_layers)
     else:
         print("Usage: clay_3dp_print <filepath>")
 

@@ -17,14 +17,14 @@ TOOL = "t_erratic_t25"
 SPEED = 75
 SPEED_PRINT = 50
 
-EXTRUSION_FACTOR_DO = "ao_printPtSpd"
+EXTRUSION_FACTOR_AO = "ao_printPtSpd"
 
 # negative means move towards the sky
-Z_ADJUSTMENT = -3
+Z_ADJUSTMENT = 55
 
 
 def get_set_extruder(speed_factor: float):
-    return rrc.SetAnalog(EXTRUSION_FACTOR_DO, speed_factor)
+    return rrc.SetAnalog(EXTRUSION_FACTOR_AO, speed_factor)
 
 
 def get_start_extrude(speed_factor=1):
@@ -114,7 +114,6 @@ def process_with_batches(
 
 
 def robot_program(layers: list[PrintLayer]):
-    breakpoint()
     # Define robot joints
     robot_joints_start_position = robot_joints_end_position = [100, 20, 25, 5, -40, -10]
 
@@ -172,7 +171,7 @@ def load_json_from_arg1():
     filepath = sys.argv[1]
     data = json_load(filepath)
     frames = data["frames"]
-    extrusion_factors = data["travel"]
+    extrusion_factors = data["extrusion_factors"]
 
     # put all in one "layer"
     if isinstance(frames[0], compas.geometry.Frame):

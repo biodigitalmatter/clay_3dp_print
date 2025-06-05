@@ -1,6 +1,6 @@
 [project]
 authors = [{ name = "Anton Tetov", email = "anton@tetov.se" }]
-dependencies = ["compas_rrc>=2.0.0,<3"]
+dependencies = ["compas>=2,<3", "compas_rrc>=2,<3"]
 license = "MIT"
 name = "clay_3dp_print"
 requires-python = ">= 3.11"
@@ -27,7 +27,8 @@ platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 clay_3dp_print = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
-compas_rrc = ">=2.0.0,<3" # install from conda
+compas = ">=2,<3"
+compas_rrc = ">=2,<3"
 
 [tool.pixi.feature.dev.tasks]
 fmt = "ruff format src"

@@ -94,7 +94,6 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
                 SPEED if print_frame.is_travel() else SPEED_PRINT,
                 rrc.Zone.Z2,
                 motion_type=rrc.Motion.LINEAR,
-                feedback_level=rrc.FeedbackLevel.DONE,
             )
 
         yield get_set_extruder(0)

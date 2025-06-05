@@ -1,5 +1,5 @@
 import sys
-import typing
+from typing import Generator
 
 import compas.geometry
 import compas_rrc as rrc
@@ -24,19 +24,19 @@ EXTRUSION_FACTOR_AO = "ao_printPtSpd"
 Z_ADJUSTMENT = 0
 
 
-def get_set_extruder(speed_factor: float):
+def get_set_extruder(speed_factor: float) -> ROSmsg:
     return rrc.SetAnalog(EXTRUSION_FACTOR_AO, speed_factor)
 
 
-def get_start_extrude(speed_factor=1):
+def get_start_extrude(speed_factor: float = 1.0) -> ROSmsg:
     return get_set_extruder(speed_factor)
 
 
-def get_stop_extrude():
+def get_stop_extrude() -> ROSmsg:
     return get_set_extruder(0)
 
 
-def construct_cmds(layers: list[PrintLayer]) -> typing.Generator[ROSmsg]:
+def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
     first_print_frame = layers[0].pop(0)
 
     first_print_frame.translate_frame_in_local_Z(Z_ADJUSTMENT)
@@ -72,7 +72,7 @@ def construct_cmds(layers: list[PrintLayer]) -> typing.Generator[ROSmsg]:
 
 
 def process_with_batches(
-    abb: rrc.AbbClient, cmd_generator: typing.Generator[ROSmsg], batch_size: int = 100
+    abb: rrc.AbbClient, cmd_generator: Generator[ROSmsg], batch_size: int = 100
 ):
     futures = []
     commands_sent = 0

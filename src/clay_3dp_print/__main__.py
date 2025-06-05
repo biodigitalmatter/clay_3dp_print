@@ -99,9 +99,8 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
 
         yield get_set_extruder(0)
 
-        z_hop_frame = PrintFrame(
-            Frame(print_frame.point, print_frame.xaxis, print_frame.yaxis), 0
-        )
+        z_hop_frame = print_frame.copy()
+        z_hop_frame.extrusion_factor = 0
         z_hop_frame.translate_frame_in_local_Z(Z_HOP)
 
         yield rrc.MoveToFrame(
@@ -154,10 +153,7 @@ def robot_program(layers: list[PrintLayer]):
             )
         )
 
-        for i, cmd in enumerate(cmd_generator):
-            abb.send(cmd)
-            if i % 100 == 0:
-                time.sleep(5)
+        stream_in_batches(abb, cmd_generator)
 
         # move robot to end position
         abb.send(

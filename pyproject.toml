@@ -31,7 +31,10 @@ compas = ">=2,<3"
 compas_rrc = ">=2,<3"
 
 [tool.pixi.feature.dev.tasks]
-fmt = "ruff format src"
+_ruff_check_fix = "ruff check --fix"
+_ruff_fmt = "ruff format"
+fmt = [{ task = "_ruff_check_fix" }, { task = "_ruff_fmt" }]
+check = "ruff check"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }

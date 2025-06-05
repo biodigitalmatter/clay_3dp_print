@@ -1,5 +1,3 @@
-import pytest
-
 from clay_3dp_print import PrintFrame
 
 
@@ -15,7 +13,6 @@ def test_print_frame_serializes_with_extrusion_factor(make_frame):
     assert data["extrusion_factor"] == 0.75
 
 
-@pytest.mark.xfail(reason="PrintFrame.copy() does not preserve extrusion_factor yet")
 def test_print_frame_copy_preserves_extrusion_factor(make_frame):
     frame = make_frame(1, 2, 3)
     print_frame = PrintFrame(frame, extrusion_factor=0.75)
@@ -30,9 +27,6 @@ def test_print_frame_copy_preserves_extrusion_factor(make_frame):
     assert copied.extrusion_factor == print_frame.extrusion_factor
 
 
-@pytest.mark.xfail(
-    reason="PrintFrame deserialization/copy support is not fully implemented yet"
-)
 def test_print_frame_from_data_roundtrip(make_frame):
     frame = make_frame(1, 2, 3)
     print_frame = PrintFrame(frame, extrusion_factor=0.75)

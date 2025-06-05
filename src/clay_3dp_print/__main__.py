@@ -1,14 +1,13 @@
 import sys
 from typing import Generator
 
-import compas.geometry
 import compas_rrc as rrc
-from compas import json_load
 from compas.geometry import Frame
 from compas_fab.backends import RosClient
 from compas_fab.backends.ros.messages import ROSmsg
 
 from clay_3dp_print import PrintFrame, PrintLayer
+from clay_3dp_print.toolpath_loader import load_print_layers_from_compas_json_dump
 
 # IP = "192.168.8.30" # cook
 IP = "localhost"
@@ -228,33 +227,12 @@ def robot_program(layers: list[PrintLayer]):
         abb.send_and_wait(rrc.PrintText("Print finished."))
 
 
-def load_json_from_arg1():
-    filepath = sys.argv[1]
-    data = json_load(filepath)
-    frames = data["frames"]
-    extrusion_factors = data["extrusion_factors"]
-
-    # put all in one "layer"
-    if isinstance(frames[0], compas.geometry.Frame):
-        if len(extrusion_factors) == len(frames) - 1:
-            # TODO: Fix me
-            extrusion_factors.append(True)
-
-        frames = [frames]
-        extrusion_factors = [extrusion_factors]
-
-    return [
-        PrintLayer.from_frames_and_factors(f, ef)
-        for f, ef in zip(frames, extrusion_factors, strict=True)
-    ]
-
-
 def main():
-    if len(sys.argv) > 1:
-        print_layers = load_json_from_arg1()
-        robot_program(print_layers)
-    else:
+    if len(sys.argv != 2):
         print("Usage: clay_3dp_print <filepath>")
+
+    print_layers = load_print_layers_from_compas_json_dump(sys.argv[1])
+    robot_program(print_layers)
 
 
 if __name__ == "__main__":

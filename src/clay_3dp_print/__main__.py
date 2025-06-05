@@ -20,7 +20,7 @@ SPEED_PRINT = 50
 EXTRUSION_FACTOR_AO = "ao_printPtSpd"
 
 # negative means move towards the sky
-Z_ADJUSTMENT = 55
+Z_ADJUSTMENT = 0
 
 
 def get_set_extruder(speed_factor: float):
@@ -107,7 +107,11 @@ def process_with_batches(
         for _ in range(len(completed)):
             try:
                 cmd = next(cmd_generator)
-                futures.append(abb.send(cmd))
+
+                feedback = abb.send(cmd)
+
+                if feedback:
+                    futures.append(feedback)
                 commands_sent += 1
             except StopIteration:
                 break
@@ -154,9 +158,22 @@ def robot_program(layers: list[PrintLayer]):
             )
         )
 
-        process_with_batches(abb, cmd_generator)
+        last_future: rrc.FutureResult | None = None
+        counter = 0
+        for cmd in cmd_generator:
+            ret = abb.send(cmd)
 
-        # Move robot to end position
+            if ret:
+                last_future = ret
+
+            counter += 1
+
+            if counter % 250 == 0 and last_future:
+                last_future.result()
+
+        # process_with_batches(abb, cmd_generator)
+
+        # move robot to end position
         abb.send(
             rrc.MoveToJoints(
                 robot_joints_end_position, external_axis_dummy, SPEED, rrc.Zone.FINE

@@ -1,4 +1,5 @@
 import sys
+import time
 from typing import Generator
 
 import compas_rrc as rrc
@@ -112,53 +113,6 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
         )
 
 
-def process_with_batches(
-    abb: rrc.AbbClient, cmd_generator: Generator[ROSmsg], batch_size: int = 100
-):
-    futures = []
-    commands_sent = 0
-
-    # Send the first batch
-    for _ in range(batch_size):
-        try:
-            cmd = next(cmd_generator)
-
-            feedback = abb.send(cmd)
-
-            if feedback:
-                futures.append(feedback)
-
-            commands_sent += 1
-        except StopIteration:
-            break
-
-    while futures:
-        completed = []
-        for f in futures:
-            try:
-                f.result(timeout=3)
-                completed.append(f)
-            except rrc.TimeoutException:
-                continue
-
-        # Remove completed futures
-        for f in completed:
-            futures.remove(f)
-
-        # Add more commands to maintain the buffer
-        for _ in range(len(completed)):
-            try:
-                cmd = next(cmd_generator)
-
-                feedback = abb.send(cmd)
-
-                if feedback:
-                    futures.append(feedback)
-                commands_sent += 1
-            except StopIteration:
-                break
-
-
 def robot_program(layers: list[PrintLayer]):
     # Define robot joints
     robot_joints_start_position = robot_joints_end_position = [-71, 8, 34, 99, -94, -58]
@@ -200,20 +154,10 @@ def robot_program(layers: list[PrintLayer]):
             )
         )
 
-        last_future: rrc.FutureResult | None = None
-        counter = 0
-        for cmd in cmd_generator:
-            ret = abb.send(cmd)
-
-            if ret:
-                last_future = ret
-
-            counter += 1
-
-            if counter % 250 == 0 and last_future:
-                last_future.result()
-
-        # process_with_batches(abb, cmd_generator)
+        for i, cmd in enumerate(cmd_generator):
+            abb.send(cmd)
+            if i % 100 == 0:
+                time.sleep(5)
 
         # move robot to end position
         abb.send(

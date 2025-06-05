@@ -8,6 +8,7 @@ version = "0.1.0"
 
 [project.optional-dependencies]
 dev = ["ruff"]
+test = ["pytest"]
 
 [project.scripts]
 clay_3dp_print = "clay_3dp_print.__main__:main"
@@ -35,10 +36,11 @@ _ruff_check_fix = "ruff check --fix"
 _ruff_fmt = "ruff format"
 fmt = [{ task = "_ruff_check_fix" }, { task = "_ruff_fmt" }]
 check = "ruff check"
+test = "pytest"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+dev = { features = ["dev", "test"], solve-group = "default" }
 
 [tool.ruff.lint]
 extend-select = ["I"]

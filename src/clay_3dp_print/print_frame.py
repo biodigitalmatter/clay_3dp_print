@@ -28,8 +28,9 @@ class PrintFrame(compas.geometry.Frame):
 
     @classmethod
     def __from_data__(cls, data):
-        extrusion_factor = data.pop("extrusion_factor")
+        extrusion_factor: float = data.pop("extrusion_factor")
         frame = compas.geometry.Frame.__from_data__(data)
+
         return cls(frame, extrusion_factor)
 
     def is_travel(self) -> bool:

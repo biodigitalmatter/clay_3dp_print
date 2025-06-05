@@ -1,12 +1,12 @@
 import sys
-from typing import Generator
+from collections.abc import Generator
 
 import compas_rrc as rrc
-from compas.geometry import Frame
 from compas_fab.backends import RosClient
 from compas_fab.backends.ros.messages import ROSmsg
 
 from clay_3dp_print import PrintFrame, PrintLayer
+from clay_3dp_print.rrc_streaming import stream_in_batches
 from clay_3dp_print.toolpath_loader import load_json_from_arg1
 
 # IP = "192.168.8.30" # cook
@@ -37,8 +37,11 @@ def get_start_extrude(speed_factor: float = 1.0):
 def get_stop_extrude() -> ROSmsg:
     return get_set_extruder(0)
 
+
 def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
-    z_hop_first_layer = layers[0][0].copy()
+    first_frame_in_first_layer = layers[0][0]
+
+    z_hop_first_layer: PrintFrame = first_frame_in_first_layer.copy()
 
     z_hop_first_layer.translate_frame_in_local_Z(Z_HOP + XYZ_ADJUSTMENT[2])
 
@@ -52,7 +55,7 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
     for i, layer in enumerate(layers):
         yield rrc.PrintText(f"Layer {i}")
 
-        first_frame_copy = layer[0].copy()
+        first_frame_copy: PrintFrame = layer[0].copy()
 
         first_frame_copy.translate_frame_in_local_Z(XYZ_ADJUSTMENT[2])
 
@@ -61,7 +64,7 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
 
         yield rrc.PrintText(f"First frame: {first_pt_str}")
 
-        z_hop_frame = first_frame_copy.copy()
+        z_hop_frame: PrintFrame = first_frame_copy.copy()
 
         z_hop_frame.translate_frame_in_local_Z(Z_HOP)
         yield rrc.MoveToFrame(
@@ -99,7 +102,8 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
 
         yield get_set_extruder(0)
 
-        z_hop_frame = print_frame.copy()
+        last_frame_in_layer = layer[-1]
+        z_hop_frame = last_frame_in_layer.copy()
         z_hop_frame.extrusion_factor = 0
         z_hop_frame.translate_frame_in_local_Z(Z_HOP)
 
@@ -117,7 +121,7 @@ def robot_program(layers: list[PrintLayer]):
     robot_joints_start_position = robot_joints_end_position = [-71, 8, 34, 99, -94, -58]
 
     # Define external axis
-    external_axis_dummy = []
+    external_axis_dummy: list[float] = []
 
     acc = 70  # Unit [%]
     ramp = 100  # Unit [%]
@@ -130,24 +134,24 @@ def robot_program(layers: list[PrintLayer]):
         abb = rrc.AbbClient(ros, "/rob1")
         print("Connected.")
 
-        abb.send(rrc.SetAcceleration(acc, ramp))
-        abb.send(rrc.SetMaxSpeed(override, max_tcp))
+        _ = abb.send(rrc.SetAcceleration(acc, ramp))
+        _ = abb.send(rrc.SetMaxSpeed(override, max_tcp))
 
-        abb.send(get_stop_extrude())  # reset signal
+        _ = abb.send(get_stop_extrude())  # reset signal
 
-        abb.send(rrc.SetTool(TOOL))
-        abb.send(rrc.SetWorkObject(WOBJ))
+        _ = abb.send(rrc.SetTool(TOOL))
+        _ = abb.send(rrc.SetWorkObject(WOBJ))
 
         # User message -> basic settings send to robot
         print("Tool, Wobj, Acc and MaxSpeed sent to robot")
 
         # Stop task user must press play button on the FlexPendant (RobotStudio)
         # before robot starts to move
-        abb.send(rrc.PrintText("Press Play to move."))
-        abb.send(rrc.Stop())
+        _ = abb.send(rrc.PrintText("Press Play to move."))
+        _ = abb.send(rrc.Stop())
 
         # Move robot to start position
-        abb.send(
+        _ = abb.send(
             rrc.MoveToJoints(
                 robot_joints_start_position, external_axis_dummy, SPEED, rrc.Zone.FINE
             )
@@ -156,14 +160,14 @@ def robot_program(layers: list[PrintLayer]):
         stream_in_batches(abb, cmd_generator)
 
         # move robot to end position
-        abb.send(
+        _ = abb.send(
             rrc.MoveToJoints(
                 robot_joints_end_position, external_axis_dummy, SPEED, rrc.Zone.FINE
             )
         )
 
         # Print Text
-        abb.send_and_wait(rrc.PrintText("Print finished."))
+        _ = abb.send_and_wait(rrc.PrintText("Print finished."))
 
 
 def main():

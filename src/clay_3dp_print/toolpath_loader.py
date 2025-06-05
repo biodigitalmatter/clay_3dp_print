@@ -1,5 +1,6 @@
 import numbers
 import os
+import pathlib
 import sys
 from collections.abc import Sequence
 
@@ -11,8 +12,8 @@ from clay_3dp_print.list_operations import iterate_nested_lists
 
 
 def print_layers_from_frames_and_extrusion_factors(
-    frames: Sequence,
-    extrusion_factors: Sequence | None = None,
+    frames: Sequence[compas.geometry.Frame],
+    extrusion_factors: list[float] | None = None,
 ) -> list[PrintLayer]:
     frame_layers = list(iterate_nested_lists(frames, compas.geometry.Frame))
 
@@ -22,9 +23,7 @@ def print_layers_from_frames_and_extrusion_factors(
             for frame_layer in frame_layers
         ]
 
-    if isinstance(extrusion_factors, (str, bytes)) or not isinstance(
-        extrusion_factors, Sequence
-    ):
+    if isinstance(extrusion_factors, (str, bytes)):
         raise TypeError(
             "extrusion_factors must be a nested sequence matching frames, or None"
         )
@@ -43,7 +42,7 @@ def print_layers_from_frames_and_extrusion_factors(
     ]
 
 
-def load_print_layers_from_compas_json_dump(path: os.PathLike):
+def load_print_layers_from_compas_json_dump(path: os.PathLike[str]):
     data = json_load(path)
 
     frames = data["frames"]
@@ -56,4 +55,4 @@ def load_print_layers_from_compas_json_dump(path: os.PathLike):
 
 
 def load_json_from_arg1() -> list[PrintLayer]:
-    return load_print_layers_from_compas_json_dump(sys.argv[1])
+    return load_print_layers_from_compas_json_dump(pathlib.Path(sys.argv[1]))

@@ -14,6 +14,7 @@ class FakeAbbClient:
         self.sent.append(cmd.instruction)
         return cmd.future
 
+
 class FakeFuture(ABC):
     @abstractmethod
     def result(self, timeout: float | None = None):
@@ -39,11 +40,11 @@ class DelayedFuture(FakeFuture):
 class InspectingFuture(FakeFuture):
     """Fake feedback future that verifies no next batch was sent too early."""
 
-    def __init__(
-        self, abb: FakeAbbClient, expected_sent_before_completion: list[str]
-    ):
+    def __init__(self, abb: FakeAbbClient, expected_sent_before_completion: list[str]):
         self.abb: FakeAbbClient = abb
-        self.expected_sent_before_completion: list[str] = expected_sent_before_completion
+        self.expected_sent_before_completion: list[str] = (
+            expected_sent_before_completion
+        )
         self.attempts: int = 0
 
     def result(self, timeout: float | None = None):
@@ -79,7 +80,6 @@ class FakeCommand:
     ):
         self.instruction = instruction
         self.future = future
-
 
 
 def test_streams_all_commands_without_feedback():

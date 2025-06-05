@@ -1,11 +1,12 @@
 import sys
 import typing
 
-from compas import json_load
 import compas.geometry
+import compas_rrc as rrc
+from compas import json_load
 from compas_fab.backends import RosClient
 from compas_fab.backends.ros.messages import ROSmsg
-import compas_rrc as rrc
+
 from clay_3dp_print import PrintLayer
 
 # IP = "192.168.8.30" # cook

@@ -13,3 +13,7 @@ class PrintLayer(UserList):
         return cls(
             [PrintFrame(f, ef) for f, ef in zip(frames, extrusion_factors, strict=True)]
         )
+
+    @classmethod
+    def from_frames_and_factor(cls, frames, extrusion_factor=1.0) -> typing.Self:
+        return cls([PrintFrame(f, extrusion_factor=extrusion_factor) for f in frames])

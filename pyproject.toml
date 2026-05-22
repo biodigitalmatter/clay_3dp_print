@@ -1,6 +1,6 @@
 [project]
 authors = [{ name = "Anton Tetov", email = "anton@tetov.se" }]
-dependencies = ["compas_rrc>=2.0.0,<3"]
+dependencies = ["compas>=2,<3", "compas_rrc>=2,<3"]
 license = "MIT"
 name = "clay_3dp_print"
 requires-python = ">= 3.11"
@@ -8,6 +8,7 @@ version = "0.1.0"
 
 [project.optional-dependencies]
 dev = ["ruff"]
+test = ["pytest"]
 
 [project.scripts]
 clay_3dp_print = "clay_3dp_print.__main__:main"
@@ -27,11 +28,16 @@ platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 clay_3dp_print = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
-compas_rrc = ">=2.0.0,<3" # install from conda
+compas = ">=2,<3"
+compas_rrc = ">=2,<3"
 
 [tool.pixi.feature.dev.tasks]
-fmt = "ruff format src"
+fmt = "ruff check --fix && ruff format"
+test = "pytest"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+dev = { features = ["dev", "test"], solve-group = "default" }
+
+[tool.ruff.lint]
+extend-select = ["I"]

@@ -1,6 +1,7 @@
+import numbers
 import os
+import sys
 from collections.abc import Sequence
-from numbers import Real
 
 import compas.geometry
 from compas.data import json_load
@@ -25,10 +26,12 @@ def print_layers_from_frames_and_extrusion_factors(
         extrusion_factors, Sequence
     ):
         raise TypeError(
-            "extrusion_factors must be a nested sequence matching frames, None, or not present in the input"
+            "extrusion_factors must be a nested sequence matching frames, or None"
         )
 
-    extrusion_factor_layers = list(iterate_nested_lists(extrusion_factors, Real))
+    extrusion_factor_layers = list(
+        iterate_nested_lists(extrusion_factors, numbers.Real)
+    )
 
     return [
         PrintLayer.from_frames_and_factors(frame_layer, extrusion_factor_layer)
@@ -50,3 +53,7 @@ def load_print_layers_from_compas_json_dump(path: os.PathLike):
         frames,
         extrusion_factors,
     )
+
+
+def load_json_from_arg1() -> list[PrintLayer]:
+    return load_print_layers_from_compas_json_dump(sys.argv[1])

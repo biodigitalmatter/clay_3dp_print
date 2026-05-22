@@ -1,5 +1,4 @@
 import sys
-import time
 from typing import Generator
 
 import compas_rrc as rrc
@@ -8,7 +7,7 @@ from compas_fab.backends import RosClient
 from compas_fab.backends.ros.messages import ROSmsg
 
 from clay_3dp_print import PrintFrame, PrintLayer
-from clay_3dp_print.toolpath_loader import load_print_layers_from_compas_json_dump
+from clay_3dp_print.toolpath_loader import load_json_from_arg1
 
 # IP = "192.168.8.30" # cook
 IP = "localhost"
@@ -172,11 +171,11 @@ def robot_program(layers: list[PrintLayer]):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 2:
+        print_layers = load_json_from_arg1()
+        robot_program(print_layers)
+    else:
         print("Usage: clay_3dp_print <filepath>")
-
-    print_layers = load_print_layers_from_compas_json_dump(sys.argv[1])
-    robot_program(print_layers)
 
 
 if __name__ == "__main__":

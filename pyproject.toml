@@ -39,3 +39,6 @@ check = "ruff check"
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
+
+[tool.ruff.lint]
+extend-select = ["I"]

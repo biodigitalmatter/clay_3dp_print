@@ -36,11 +36,12 @@ _ruff_check_fix = "ruff check --fix"
 _ruff_fmt = "ruff format"
 fmt = [{ task = "_ruff_check_fix" }, { task = "_ruff_fmt" }]
 check = "ruff check"
+
+[tool.pixi.feature.test.tasks]
 test = "pytest"
 
 [tool.pixi.environments]
-default = { features = [], solve-group = "default" }
-dev = { features = ["dev", "test"], solve-group = "default" }
+default = { features = ["dev", "test"], solve-group = "default" }
 
 [tool.ruff.lint]
 extend-select = ["I"]

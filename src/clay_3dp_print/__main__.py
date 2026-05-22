@@ -38,13 +38,8 @@ def get_start_extrude(speed_factor: float = 1.0):
 def get_stop_extrude() -> ROSmsg:
     return get_set_extruder(0)
 
-def copy_printframe(f: PrintFrame) -> PrintFrame:
-    return PrintFrame(Frame(f.point, xaxis=f.xaxis, yaxis=f.yaxis), f.extrusion_factor)
-
-
 def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
-    f = layers[0][0]
-    z_hop_first_layer = copy_printframe(layers[0][0])
+    z_hop_first_layer = layers[0][0].copy()
 
     z_hop_first_layer.translate_frame_in_local_Z(Z_HOP + XYZ_ADJUSTMENT[2])
 
@@ -58,7 +53,7 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
     for i, layer in enumerate(layers):
         yield rrc.PrintText(f"Layer {i}")
 
-        first_frame_copy = copy_printframe(layer[0])
+        first_frame_copy = layer[0].copy()
 
         first_frame_copy.translate_frame_in_local_Z(XYZ_ADJUSTMENT[2])
 
@@ -67,7 +62,7 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
 
         yield rrc.PrintText(f"First frame: {first_pt_str}")
 
-        z_hop_frame = copy_printframe(first_frame_copy)
+        z_hop_frame = first_frame_copy.copy()
 
         z_hop_frame.translate_frame_in_local_Z(Z_HOP)
         yield rrc.MoveToFrame(

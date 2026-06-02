@@ -38,13 +38,15 @@ def get_start_extrude(speed_factor: float = 1.0):
 def get_stop_extrude() -> ROSmsg:
     return get_set_extruder(0)
 
+def copy_printframe(f: PrintFrame) -> PrintFrame:
+    return PrintFrame(Frame(f.point, xaxis=f.xaxis, yaxis=f.yaxis), f.extrusion_factor)
+
 
 def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
     f = layers[0][0]
-    z_hop_first_layer = PrintFrame(Frame(f.point, xaxis=f.xaxis, yaxis=f.yaxis), 0)
-    # z_hop_first_layer = PrintFrame(f.copy(), 0)
+    z_hop_first_layer = copy_printframe(layers[0][0])
 
-    z_hop_first_layer.translate_frame_in_local_Z(Z_HOP)
+    z_hop_first_layer.translate_frame_in_local_Z(Z_HOP + XYZ_ADJUSTMENT[2])
 
     print(f"First before print Z: {z_hop_first_layer.zaxis}")
 
@@ -56,13 +58,16 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
     for i, layer in enumerate(layers):
         yield rrc.PrintText(f"Layer {i}")
 
-        first_frame = layer[0]
-        x, y, z = first_frame.point
+        first_frame_copy = copy_printframe(layer[0])
+
+        first_frame_copy.translate_frame_in_local_Z(XYZ_ADJUSTMENT[2])
+
+        x, y, z = first_frame_copy.point
         first_pt_str = f"{x:.2f},{y:.2f},{z:.2f}"
 
         yield rrc.PrintText(f"First frame: {first_pt_str}")
 
-        z_hop_frame = PrintFrame(Frame(f.point, xaxis=f.xaxis, yaxis=f.yaxis), 0)
+        z_hop_frame = copy_printframe(first_frame_copy)
 
         z_hop_frame.translate_frame_in_local_Z(Z_HOP)
         yield rrc.MoveToFrame(
@@ -73,7 +78,7 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
             feedback_level=rrc.FeedbackLevel.DONE,
         )
         yield rrc.MoveToFrame(
-            first_frame,
+            first_frame_copy,
             SPEED,
             rrc.Zone.FINE,
             motion_type=rrc.Motion.LINEAR,
@@ -94,7 +99,7 @@ def construct_cmds(layers: list[PrintLayer]) -> Generator[ROSmsg]:
             yield rrc.MoveToFrame(
                 print_frame,
                 SPEED if print_frame.is_travel() else SPEED_PRINT,
-                rrc.Zone.Z2,
+                rrc.Zone.Z1,
                 motion_type=rrc.Motion.LINEAR,
             )
 
@@ -172,7 +177,7 @@ def robot_program(layers: list[PrintLayer]):
 
 
 def main():
-    if len(sys.argv != 2):
+    if len(sys.argv) != 2:
         print("Usage: clay_3dp_print <filepath>")
 
     print_layers = load_print_layers_from_compas_json_dump(sys.argv[1])

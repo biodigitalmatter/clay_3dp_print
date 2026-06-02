@@ -13,7 +13,8 @@ from clay_3dp_print.toolpath_loader import load_print_layers_from_compas_json_du
 # IP = "192.168.8.30" # cook
 IP = "localhost"
 
-WOBJ = "wobj_pallet_markers"
+WOBJ = "wobj_www"
+
 TOOL = "t_erratic_t25"
 SPEED = 150
 SPEED_PRINT = 50
@@ -21,7 +22,7 @@ SPEED_PRINT = 50
 EXTRUSION_FACTOR_AO = "ao_printPtSpd"
 
 # negative Z means move towards the sky
-XYZ_ADJUSTMENT = (0, 0, 6)
+XYZ_ADJUSTMENT = (0, 0, -7)
 
 Z_HOP = -50
 

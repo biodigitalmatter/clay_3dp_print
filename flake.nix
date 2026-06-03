@@ -25,7 +25,7 @@
         {
           devShells.default = pkgs.mkShell {
             name = "clay_3dp_print-dev_shell";
-            inputsFrom = [config.treefmt.build.devShell];
+            inputsFrom = [ config.treefmt.build.devShell ];
             buildInputs = with pkgs; [
               basedpyright
               config.treefmt.build.wrapper
